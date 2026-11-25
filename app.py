@@ -202,10 +202,21 @@ def load_artifacts():
 
 @st.cache_resource
 def get_groq_client():
-    api_key = st.secrets.get("GROQ_API_KEY", None)
+    import os
+    # Environment first, so a container or CI run can inject the key.
+    api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
-        import os
-        api_key = os.environ.get("GROQ_API_KEY")
+        # Fall back to Streamlit secrets; raises if no secrets.toml exists at all.
+        try:
+            api_key = st.secrets["GROQ_API_KEY"]
+        except Exception:
+            api_key = None
+    if not api_key:
+        st.error(
+            "GROQ_API_KEY is not set. Provide it as an environment variable "
+            "or in .streamlit/secrets.toml."
+        )
+        st.stop()
     return Groq(api_key=api_key)
 
 
